@@ -557,9 +557,13 @@ class IPAddr
   end
 
   def in_addr(addr)
-    (addr =~ /\A\d+\.\d+\.\d+\.\d+\z/) && addr.split('.').inject(0){|i, s|
-      i << 8 | s.to_i
-    }
+    (addr =~ /\A(?:(?:0|[1-9]\d{0,2})\.){3}(?:0|[1-9]\d{0,2})\z/) &&
+      addr.split('.').inject(0){|i, s|
+        n = s.to_i
+        raise ArgumentError, 'invalid address' unless n <= 255
+
+        i << 8 | n
+      }
   end
 
   def in6_addr(left)
