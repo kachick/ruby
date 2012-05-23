@@ -499,7 +499,7 @@ class IPAddr
       when Socket::AF_INET, Socket::AF_INET6
         set(addr.to_i, family)
         @mask_addr = (family == Socket::AF_INET) ? IN4MASK : IN6MASK
-        return
+        return nil
       when Socket::AF_UNSPEC
         raise ArgumentError, 'address family must be specified'
       else
@@ -524,8 +524,7 @@ class IPAddr
 
     @addr = @family = nil
     if family == Socket::AF_UNSPEC || family == Socket::AF_INET
-      @addr = in_addr(prefix)
-      if @addr
+      if @addr = in_addr(prefix)
         @family = Socket::AF_INET
       end
     end
@@ -585,7 +584,7 @@ class IPAddr
     
     return nil if rest < 0
 
-    (l + Array.new(rest, '0') + r).inject(0) { |i, s|
+    (l + Array.new(rest, '0') + r).inject(0) {|i, s|
       i << 16 | s.hex
     }
   end
