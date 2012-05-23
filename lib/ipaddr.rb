@@ -26,7 +26,7 @@ unless Socket.const_defined? "AF_INET6"
   class << IPSocket
     # Returns +true+ if +addr+ is a valid IPv4 address.
     def valid_v4?(addr)
-      if /\A(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\Z/ =~ addr
+      if /\A(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\z/ =~ addr
         $~.captures.all? {|i| i.to_i < 256}
       end
       
@@ -36,9 +36,9 @@ unless Socket.const_defined? "AF_INET6"
     # Returns +true+ if +addr+ is a valid IPv6 address.
     def valid_v6?(addr)
       # IPv6 (normal)
-      return true if /\A[\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*\Z/ =~ addr
-      return true if /\A[\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*::([\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*)?\Z/ =~ addr
-      return true if /\A::([\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*)?\Z/ =~ addr
+      return true if /\A[\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*\z/ =~ addr
+      return true if /\A[\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*::([\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*)?\z/ =~ addr
+      return true if /\A::([\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*)?\z/ =~ addr
       # IPv6 (IPv4 compat)
       return true if /\A[\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*:/ =~ addr && valid_v4?($')
       return true if /\A[\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*::([\dA-Fa-f]{1,4}(:[\dA-Fa-f]{1,4})*:)?/ =~ addr && valid_v4?($')
@@ -64,7 +64,7 @@ unless Socket.const_defined? "AF_INET6"
     def getaddress(str)
       if valid?(str)
         str
-      elsif /\A[-A-Za-z\d.]+\Z/ =~ str
+      elsif /\A[-A-Za-z\d.]+\z/ =~ str
         getaddress_orig(str)
       else
         raise ArgumentError, 'invalid address'
@@ -221,7 +221,7 @@ class IPAddr
 
     str.gsub!(/\b0{1,3}([\da-f]+)\b/i, '\1')
     loop do
-      break if str.sub!(/\A0:0:0:0:0:0:0:0\Z/, '::')
+      break if str.sub!(/\A0:0:0:0:0:0:0:0\z/, '::')
       break if str.sub!(/\b0:0:0:0:0:0:0\b/, ':')
       break if str.sub!(/\b0:0:0:0:0:0\b/, ':')
       break if str.sub!(/\b0:0:0:0:0\b/, ':')
@@ -232,7 +232,7 @@ class IPAddr
     end
     str.sub!(/:{3,}/, '::')
 
-    if /\A::(ffff:)?([\da-f]{1,4}):([\da-f]{1,4})\Z/i =~ str
+    if /\A::(ffff:)?([\da-f]{1,4}):([\da-f]{1,4})\z/i =~ str
       sprintf(
         '::%s%d.%d.%d.%d',
         $1,
@@ -436,7 +436,7 @@ class IPAddr
     prefixlen = nil
 
     if mask.kind_of?(String)
-      if mask =~ /^\d+$/
+      if mask =~ /\A\d+\z/
         prefixlen = mask.to_i
       else
         m = IPAddr.new(mask)
@@ -508,7 +508,7 @@ class IPAddr
     end
 
     prefix, prefixlen = addr.split('/')
-    if prefix =~ /^\[(.*)\]$/i
+    if prefix =~ /\A\[(.*)\]\z/i
       prefix = $1
       family = Socket::AF_INET6
     end
@@ -557,7 +557,7 @@ class IPAddr
   end
 
   def in_addr(addr)
-    (addr =~ /^\d+\.\d+\.\d+\.\d+$/) && addr.split('.').inject(0){|i, s|
+    (addr =~ /\A\d+\.\d+\.\d+\.\d+\z/) && addr.split('.').inject(0){|i, s|
       i << 8 | s.to_i
     }
   end
@@ -566,13 +566,13 @@ class IPAddr
     left, right = nil, nil
 
     case left
-    when /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i
+    when /\A::ffff:(\d+\.\d+\.\d+\.\d+)\z/i
       return in_addr($1) + 0xffff00000000
-    when /^::(\d+\.\d+\.\d+\.\d+)$/i
+    when /\A::(\d+\.\d+\.\d+\.\d+)\z/i
       return in_addr($1)
     when /[^0-9a-f:]/i
       raise ArgumentError, 'invalid address'
-    when /^(.*)::(.*)$/
+    when /\A(.*)::(.*)\z/
       left, right = $1, $2
     else
       right = ''
