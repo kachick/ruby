@@ -108,7 +108,7 @@ class IPAddr
   # Creates a new ipaddr containing the given network byte ordered
   # string form of an IP address.
   def IPAddr::new_ntoh(addr)
-    return IPAddr.new(IPAddr::ntop(addr))
+    IPAddr.new(IPAddr::ntop(addr))
   end
 
   # Convert a network byte ordered string form of an IP address into
@@ -116,50 +116,49 @@ class IPAddr
   def IPAddr::ntop(addr)
     case addr.size
     when 4
-      s = addr.unpack('C4').join('.')
+      addr.unpack('C4').join('.')
     when 16
-      s = IN6FORMAT % addr.unpack('n8')
+      IN6FORMAT % addr.unpack('n8')
     else
       raise ArgumentError, "unsupported address family"
     end
-    return s
   end
 
   # Returns a new ipaddr built by bitwise AND.
   def &(other)
-    return self.clone.set(@addr & coerce_other(other).to_i)
+    self.clone.set(@addr & coerce_other(other).to_i)
   end
 
   # Returns a new ipaddr built by bitwise OR.
   def |(other)
-    return self.clone.set(@addr | coerce_other(other).to_i)
+    self.clone.set(@addr | coerce_other(other).to_i)
   end
 
   # Returns a new ipaddr built by bitwise right-shift.
   def >>(num)
-    return self.clone.set(@addr >> num)
+    self.clone.set(@addr >> num)
   end
 
   # Returns a new ipaddr built by bitwise left shift.
   def <<(num)
-    return self.clone.set(addr_mask(@addr << num))
+    self.clone.set(addr_mask(@addr << num))
   end
 
   # Returns a new ipaddr built by bitwise negation.
   def ~
-    return self.clone.set(addr_mask(~@addr))
+    self.clone.set(addr_mask(~@addr))
   end
 
   # Returns true if two ipaddrs are equal.
   def ==(other)
     other = coerce_other(other)
-    return @family == other.family && @addr == other.to_i
+    @family == other.family && @addr == other.to_i
   end
 
   # Returns a new ipaddr built by masking IP address with the given
   # prefixlen/netmask. (e.g. 8, 64, "255.255.255.0", etc.)
   def mask(prefixlen)
-    return self.clone.mask!(prefixlen)
+    self.clone.mask!(prefixlen)
   end
 
   # Returns true if the given ipaddr is in the range.
@@ -196,7 +195,8 @@ class IPAddr
     if family != other_family
       return false
     end
-    return ((addr & mask_addr) == (other_addr & mask_addr))
+
+    (addr & mask_addr) == (other_addr & mask_addr)
   end
   alias === include?
 
@@ -233,16 +233,16 @@ class IPAddr
   # Returns a string containing the IP address representation in
   # canonical form.
   def to_string
-    return _to_string(@addr)
+    _to_string(@addr)
   end
 
   # Returns a network byte ordered string form of the IP address.
   def hton
     case @family
     when Socket::AF_INET
-      return [@addr].pack('N')
+      [@addr].pack('N')
     when Socket::AF_INET6
-      return (0..7).map { |i|
+      (0..7).map { |i|
         (@addr >> (112 - 16 * i)) & 0xffff
       }.pack('n8')
     else
@@ -252,17 +252,17 @@ class IPAddr
 
   # Returns true if the ipaddr is an IPv4 address.
   def ipv4?
-    return @family == Socket::AF_INET
+    @family == Socket::AF_INET
   end
 
   # Returns true if the ipaddr is an IPv6 address.
   def ipv6?
-    return @family == Socket::AF_INET6
+    @family == Socket::AF_INET6
   end
 
   # Returns true if the ipaddr is an IPv4-mapped IPv6 address.
   def ipv4_mapped?
-    return ipv6? && (@addr >> 32) == 0xffff
+    ipv6? && (@addr >> 32) == 0xffff
   end
 
   # Returns true if the ipaddr is an IPv4-compatible IPv6 address.
@@ -270,8 +270,9 @@ class IPAddr
     if !ipv6? || (@addr >> 32) != 0
       return false
     end
+
     a = (@addr & IN4MASK)
-    return a != 0 && a != 1
+    a != 0 && a != 1
   end
 
   # Returns a new ipaddr built by converting the native IPv4 address
@@ -280,7 +281,8 @@ class IPAddr
     if !ipv4?
       raise ArgumentError, "not an IPv4 address"
     end
-    return self.clone.set(@addr | 0xffff00000000, Socket::AF_INET6)
+    
+    self.clone.set(@addr | 0xffff00000000, Socket::AF_INET6)
   end
 
   # Returns a new ipaddr built by converting the native IPv4 address
@@ -289,7 +291,8 @@ class IPAddr
     if !ipv4?
       raise ArgumentError, "not an IPv4 address"
     end
-    return self.clone.set(@addr, Socket::AF_INET6)
+    
+    self.clone.set(@addr, Socket::AF_INET6)
   end
 
   # Returns a new ipaddr built by converting the IPv6 address into a
@@ -299,7 +302,8 @@ class IPAddr
     if !ipv4_mapped? && !ipv4_compat?
       return self
     end
-    return self.clone.set(@addr & IN4MASK, Socket::AF_INET)
+    
+    self.clone.set(@addr & IN4MASK, Socket::AF_INET)
   end
 
   # Returns a string for DNS reverse lookup.  It returns a string in
@@ -307,9 +311,9 @@ class IPAddr
   def reverse
     case @family
     when Socket::AF_INET
-      return _reverse + ".in-addr.arpa"
+      _reverse + ".in-addr.arpa"
     when Socket::AF_INET6
-      return ip6_arpa
+      ip6_arpa
     else
       raise "unsupported address family"
     end
@@ -320,7 +324,8 @@ class IPAddr
     if !ipv6?
       raise ArgumentError, "not an IPv6 address"
     end
-    return _reverse + ".ip6.arpa"
+    
+    _reverse + ".ip6.arpa"
   end
 
   # Returns a string for DNS reverse lookup compatible with RFC1886.
@@ -328,12 +333,13 @@ class IPAddr
     if !ipv6?
       raise ArgumentError, "not an IPv6 address"
     end
-    return _reverse + ".ip6.int"
+    
+    _reverse + ".ip6.int"
   end
 
   # Returns the successor to the ipaddr.
   def succ
-    return self.clone.set(@addr + 1, @family)
+    self.clone.set(@addr + 1, @family)
   end
 
   # Compares the ipaddr with another.
@@ -342,18 +348,19 @@ class IPAddr
 
     return nil if other.family != @family
 
-    return @addr <=> other.to_i
+    @addr <=> other.to_i
   end
+
   include Comparable
 
   # Checks equality used by Hash.
   def eql?(other)
-    return self.class == other.class && self.hash == other.hash && self == other
+    self.class == other.class && self.hash == other.hash && self == other
   end
 
   # Returns a hash value used by Hash, Set, and Array classes
   def hash
-    return ([@addr, @mask_addr].hash << 1) | (ipv4? ? 0 : 1)
+    ([@addr, @mask_addr].hash << 1) | (ipv4? ? 0 : 1)
   end
 
   # Creates a Range object for the network address.
@@ -369,7 +376,7 @@ class IPAddr
       raise "unsupported address family"
     end
 
-    return clone.set(begin_addr, @family)..clone.set(end_addr, @family)
+    clone.set(begin_addr, @family)..clone.set(end_addr, @family)
   end
 
   # Returns a string containing a human-readable representation of the
@@ -405,11 +412,13 @@ class IPAddr
     else
       raise ArgumentError, "unsupported address family"
     end
+
     @addr = addr
     if family[0]
       @family = family[0]
     end
-    return self
+
+    self
   end
 
   # Set current netmask to given mask. 
@@ -429,6 +438,7 @@ class IPAddr
     else
       prefixlen = mask
     end
+
     case @family
     when Socket::AF_INET
       if prefixlen < 0 || prefixlen > 32
@@ -445,8 +455,10 @@ class IPAddr
     else
       raise "unsupported address family"
     end
+
     @addr = ((@addr >> masklen) << masklen)
-    return self
+  
+    self
   end
 
   private
@@ -482,11 +494,13 @@ class IPAddr
         raise ArgumentError, "unsupported address family: #{family}"
       end
     end
+
     prefix, prefixlen = addr.split('/')
     if prefix =~ /^\[(.*)\]$/i
       prefix = $1
       family = Socket::AF_INET6
     end
+
     # It seems AI_NUMERICHOST doesn't do the job.
     #Socket.getaddrinfo(left, nil, Socket::AF_INET6, Socket::SOCK_STREAM, nil,
     #                  Socket::AI_NUMERICHOST)
@@ -495,6 +509,7 @@ class IPAddr
     rescue
       raise ArgumentError, "invalid address"
     end
+
     @addr = @family = nil
     if family == Socket::AF_UNSPEC || family == Socket::AF_INET
       @addr = in_addr(prefix)
@@ -502,13 +517,16 @@ class IPAddr
         @family = Socket::AF_INET
       end
     end
+
     if !@addr && (family == Socket::AF_UNSPEC || family == Socket::AF_INET6)
       @addr = in6_addr(prefix)
       @family = Socket::AF_INET6
     end
+
     if family != Socket::AF_UNSPEC && @family != family
       raise ArgumentError, "address family mismatch"
     end
+
     if prefixlen
       mask!(prefixlen)
     else
@@ -533,7 +551,6 @@ class IPAddr
         i << 8 | s.to_i
       }
     end
-    return nil
   end
 
   def in6_addr(left)
@@ -549,13 +566,15 @@ class IPAddr
     else
       right = ''
     end
+
     l = left.split(':')
     r = right.split(':')
     rest = 8 - l.size - r.size
     if rest < 0
       return nil
     end
-    return (l + Array.new(rest, '0') + r).inject(0) { |i, s|
+
+    (l + Array.new(rest, '0') + r).inject(0) { |i, s|
       i << 16 | s.hex
     }
   end
@@ -563,9 +582,9 @@ class IPAddr
   def addr_mask(addr)
     case @family
     when Socket::AF_INET
-      return addr & IN4MASK
+      addr & IN4MASK
     when Socket::AF_INET6
-      return addr & IN6MASK
+      addr & IN6MASK
     else
       raise "unsupported address family"
     end
@@ -574,11 +593,11 @@ class IPAddr
   def _reverse
     case @family
     when Socket::AF_INET
-      return (0..3).map { |i|
+      (0..3).map { |i|
         (@addr >> (8 * i)) & 0xff
       }.join('.')
     when Socket::AF_INET6
-      return ("%.32x" % @addr).reverse!.gsub!(/.(?!$)/, '\&.')
+      ("%.32x" % @addr).reverse!.gsub!(/.(?!$)/, '\&.')
     else
       raise "unsupported address family"
     end
@@ -587,11 +606,11 @@ class IPAddr
   def _to_string(addr)
     case @family
     when Socket::AF_INET
-      return (0..3).map { |i|
+      (0..3).map { |i|
         (addr >> (24 - 8 * i)) & 0xff
       }.join('.')
     when Socket::AF_INET6
-      return (("%.32x" % addr).gsub!(/.{4}(?!$)/, '\&:'))
+      (("%.32x" % addr).gsub!(/.{4}(?!$)/, '\&:'))
     else
       raise "unsupported address family"
     end
