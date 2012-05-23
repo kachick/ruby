@@ -105,48 +105,52 @@ class IPAddr
   # Returns the address family of this IP address.
   attr_reader :family
 
-  # Creates a new ipaddr containing the given network byte ordered
-  # string form of an IP address.
-  def IPAddr::new_ntoh(addr)
-    IPAddr.new(IPAddr::ntop(addr))
-  end
+  class << self
 
-  # Convert a network byte ordered string form of an IP address into
-  # human readable form.
-  def IPAddr::ntop(addr)
-    case addr.size
-    when 4
-      addr.unpack('C4').join('.')
-    when 16
-      IN6FORMAT % addr.unpack('n8')
-    else
-      raise ArgumentError, "unsupported address family"
+    # Creates a new ipaddr containing the given network byte ordered
+    # string form of an IP address.
+    def new_ntoh(addr)
+      IPAddr.new(IPAddr::ntop(addr))
     end
+
+    # Convert a network byte ordered string form of an IP address into
+    # human readable form.
+    def ntop(addr)
+      case addr.size
+      when 4
+        addr.unpack('C4').join('.')
+      when 16
+        IN6FORMAT % addr.unpack('n8')
+      else
+        raise ArgumentError, "unsupported address family"
+      end
+    end
+  
   end
 
   # Returns a new ipaddr built by bitwise AND.
   def &(other)
-    self.clone.set(@addr & coerce_other(other).to_i)
+    clone.set(@addr & coerce_other(other).to_i)
   end
 
   # Returns a new ipaddr built by bitwise OR.
   def |(other)
-    self.clone.set(@addr | coerce_other(other).to_i)
+    clone.set(@addr | coerce_other(other).to_i)
   end
 
   # Returns a new ipaddr built by bitwise right-shift.
   def >>(num)
-    self.clone.set(@addr >> num)
+    clone.set(@addr >> num)
   end
 
   # Returns a new ipaddr built by bitwise left shift.
   def <<(num)
-    self.clone.set(addr_mask(@addr << num))
+    clone.set(addr_mask(@addr << num))
   end
 
   # Returns a new ipaddr built by bitwise negation.
   def ~
-    self.clone.set(addr_mask(~@addr))
+    clone.set(addr_mask(~@addr))
   end
 
   # Returns true if two ipaddrs are equal.
@@ -158,7 +162,7 @@ class IPAddr
   # Returns a new ipaddr built by masking IP address with the given
   # prefixlen/netmask. (e.g. 8, 64, "255.255.255.0", etc.)
   def mask(prefixlen)
-    self.clone.mask!(prefixlen)
+    clone.mask!(prefixlen)
   end
 
   # Returns true if the given ipaddr is in the range.
@@ -282,7 +286,7 @@ class IPAddr
       raise ArgumentError, "not an IPv4 address"
     end
     
-    self.clone.set(@addr | 0xffff00000000, Socket::AF_INET6)
+    clone.set(@addr | 0xffff00000000, Socket::AF_INET6)
   end
 
   # Returns a new ipaddr built by converting the native IPv4 address
@@ -292,7 +296,7 @@ class IPAddr
       raise ArgumentError, "not an IPv4 address"
     end
     
-    self.clone.set(@addr, Socket::AF_INET6)
+    clone.set(@addr, Socket::AF_INET6)
   end
 
   # Returns a new ipaddr built by converting the IPv6 address into a
@@ -303,7 +307,7 @@ class IPAddr
       return self
     end
     
-    self.clone.set(@addr & IN4MASK, Socket::AF_INET)
+    clone.set(@addr & IN4MASK, Socket::AF_INET)
   end
 
   # Returns a string for DNS reverse lookup.  It returns a string in
@@ -339,7 +343,7 @@ class IPAddr
 
   # Returns the successor to the ipaddr.
   def succ
-    self.clone.set(@addr + 1, @family)
+    clone.set(@addr + 1, @family)
   end
 
   # Compares the ipaddr with another.
@@ -355,7 +359,7 @@ class IPAddr
 
   # Checks equality used by Hash.
   def eql?(other)
-    self.class == other.class && self.hash == other.hash && self == other
+    self.class == other.class && hash == other.hash && self == other
   end
 
   # Returns a hash value used by Hash, Set, and Array classes
