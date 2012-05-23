@@ -451,22 +451,22 @@ class IPAddr
       prefixlen = mask
     end
 
-    case @family
-    when Socket::AF_INET
-      if prefixlen < 0 || prefixlen > 32
-        raise ArgumentError, 'invalid length'
+    @mask_addr = (
+      case @family
+      when Socket::AF_INET
+        raise ArgumentError, 'invalid length' if prefixlen < 0 || prefixlen > 32
+
+        masklen = 32 - prefixlen
+        (IN4MASK >> masklen) << masklen
+      when Socket::AF_INET6
+        raise ArgumentError, 'invalid length' if prefixlen < 0 || prefixlen > 128
+
+        masklen = 128 - prefixlen
+        (IN6MASK >> masklen) << masklen
+      else
+        raise 'unsupported address family'
       end
-      masklen = 32 - prefixlen
-      @mask_addr = ((IN4MASK >> masklen) << masklen)
-    when Socket::AF_INET6
-      if prefixlen < 0 || prefixlen > 128
-        raise ArgumentError, 'invalid length'
-      end
-      masklen = 128 - prefixlen
-      @mask_addr = ((IN6MASK >> masklen) << masklen)
-    else
-      raise 'unsupported address family'
-    end
+    )
 
     @addr = ((@addr >> masklen) << masklen)
   
