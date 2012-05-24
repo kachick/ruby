@@ -17,20 +17,16 @@
 #
 require 'socket'
 
-unless Socket.const_defined? "AF_INET6"
-  class Socket < BasicSocket
-    # IPv6 protocol family
-    AF_INET6 = Object.new
-  end
-
-  class << IPSocket
+class IPAddr
+  
+  module Validatable
     # Returns +true+ if +addr+ is a valid IPv4 address.
     def valid_v4?(addr)
-      if /\A(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\z/ =~ addr
-        $~.captures.all? {|i| i.to_i < 256}
+      if /\A(?:(?:0|[1-9]\d{0,2})\.){3}(?:0|[1-9]\d{0,2})\z/ =~ addr
+        $~.captures.all? {|i| i.to_i <= 255}
+      else
+        false
       end
-      
-      false
     end
 
     # Returns +true+ if +addr+ is a valid IPv6 address.
@@ -51,26 +47,48 @@ unless Socket.const_defined? "AF_INET6"
     def valid?(addr)
       valid_v4?(addr) || valid_v6?(addr)
     end
-
-    alias getaddress_orig getaddress
-
-    # Returns a +String+ based representation of a valid DNS hostname,
-    # IPv4 or IPv6 address.
-    # 
-    #   IPSocket.getaddress 'localhost'         #=> "::1"
-    #   IPSocket.getaddress 'broadcasthost'     #=> "255.255.255.255"
-    #   IPSocket.getaddress 'www.ruby-lang.org' #=> "221.186.184.68"
-    #   IPSocket.getaddress 'www.ccc.de'        #=> "2a00:1328:e102:ccc0::122"
-    def getaddress(str)
-      if valid?(str)
-        str
-      elsif /\A[-A-Za-z\d.]+\z/ =~ str
-        getaddress_orig(str)
-      else
-        raise ArgumentError, 'invalid address'
-      end
-    end
   end
+  
+  extend Validatable
+  include Validatable
+
+end
+
+unless Socket.const_defined? :AF_INET6
+  class Socket < BasicSocket
+    # IPv6 protocol family
+    AF_INET6 = Object.new
+  end
+
+  class IPSocket
+
+    extend IPAddr::Validatable
+
+    class << self
+
+      alias getaddress_orig getaddress
+
+      # Returns a +String+ based representation of a valid DNS hostname,
+      # IPv4 or IPv6 address.
+      # 
+      #   IPSocket.getaddress 'localhost'         #=> "::1"
+      #   IPSocket.getaddress 'broadcasthost'     #=> "255.255.255.255"
+      #   IPSocket.getaddress 'www.ruby-lang.org' #=> "221.186.184.68"
+      #   IPSocket.getaddress 'www.ccc.de'        #=> "2a00:1328:e102:ccc0::122"
+      def getaddress(str)
+        if valid?(str)
+          str
+        elsif /\A[-A-Za-z\d.]+\z/ =~ str
+          getaddress_orig(str)
+        else
+          raise ArgumentError, 'invalid address'
+        end
+      end
+    
+    end
+
+  end
+
 end
 
 # IPAddr provides a set of methods to manipulate an IP address.  Both IPv4 and
@@ -476,6 +494,8 @@ class IPAddr
   # those, such as &, |, include? and ==, accept a string, or a packed
   # in_addr value instead of an IPAddr object.
   def initialize(addr = '::', family = Socket::AF_UNSPEC)
+    raise ArgumentError, 'invalid address' unless valid? addr
+    
     unless addr.kind_of?(String)
       case family
       when Socket::AF_INET, Socket::AF_INET6
@@ -540,7 +560,7 @@ class IPAddr
 
   # return nil if str is invalid format for IPv4
   def in4_addr(str)
-    return nil unless /\A(?:(?:0|[1-9]\d{0,2})\.){3}(?:0|[1-9]\d{0,2})\z/ =~ str
+    return nil unless valid_v4? str
 
     str.split(IN4_DELIMITER).inject(0){|ret, octet_str|
       octet = octet_str.to_i
