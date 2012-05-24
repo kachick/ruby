@@ -95,18 +95,18 @@ end
 #   p ipaddr3                   #=> #<IPAddr: IPv4:192.168.2.0/255.255.255.0>
 
 class IPAddr
+  
+  include Comparable
 
-  V4_DELIMITER = '.'.freeze
-  V6_DELIMITER = ':'.freeze
+  IN4_DELIMITER = '.'.freeze
+  IN6_DELIMITER = ':'.freeze
 
   # 32 bit mask for IPv4
   IN4MASK = 0xffffffff
   # 128 bit mask for IPv4
   IN6MASK = 0xffffffffffffffffffffffffffffffff
   # Formatstring for IPv6
-  IN6FORMAT = (["%.4x"] * 8).join(V6_DELIMITER)
-
-
+  IN6FORMAT = (["%.4x"] * 8).join(IN6_DELIMITER)
 
   # Returns the address family of this IP address.
   attr_reader :family
@@ -124,7 +124,7 @@ class IPAddr
     def ntop(addr)
       case addr.size
       when 4
-        addr.unpack('C4').join(V4_DELIMITER)
+        addr.unpack('C4').join(IN4_DELIMITER)
       when 16
         IN6FORMAT % addr.unpack('n8')
       else
@@ -162,7 +162,7 @@ class IPAddr
   # Returns true if two ipaddrs are equal.
   def ==(other)
     other = coerce_other(other)
-    @family == other.family && @addr == other.addr
+    (@family == other.family) && (@addr == other.addr)
   end
 
   # Returns a new ipaddr built by masking IP address with the given
@@ -186,8 +186,8 @@ class IPAddr
     if ipv4_mapped?
       return false if (@mask_addr >> 32) != 0xffffffffffffffffffffffff
 
-      mask_addr = (@mask_addr & IN4MASK)
-      addr = (@addr & IN4MASK)
+      mask_addr = @mask_addr & IN4MASK
+      addr = @addr & IN4MASK
       family = Socket::AF_INET
     else
       mask_addr = @mask_addr
@@ -196,7 +196,7 @@ class IPAddr
     end
 
     if other.ipv4_mapped?
-      other_addr = (other.to_i & IN4MASK)
+      other_addr = other.to_i & IN4MASK
       other_family = Socket::AF_INET
     else
       other_addr = other.to_i
@@ -226,13 +226,13 @@ class IPAddr
 
     str.gsub!(/\b0{1,3}([\da-f]+)\b/i, '\1')
     loop do
-      break if str.sub!(/\A0:0:0:0:0:0:0:0\z/, V6_DELIMITER * 2)
-      break if str.sub!(/\b0:0:0:0:0:0:0\b/, V6_DELIMITER)
-      break if str.sub!(/\b0:0:0:0:0:0\b/, V6_DELIMITER)
-      break if str.sub!(/\b0:0:0:0:0\b/, V6_DELIMITER)
-      break if str.sub!(/\b0:0:0:0\b/, V6_DELIMITER)
-      break if str.sub!(/\b0:0:0\b/, V6_DELIMITER)
-      break if str.sub!(/\b0:0\b/, V6_DELIMITER)
+      break if str.sub!(/\A0:0:0:0:0:0:0:0\z/, IN6_DELIMITER * 2)
+      break if str.sub!(/\b0:0:0:0:0:0:0\b/, IN6_DELIMITER)
+      break if str.sub!(/\b0:0:0:0:0:0\b/, IN6_DELIMITER)
+      break if str.sub!(/\b0:0:0:0:0\b/, IN6_DELIMITER)
+      break if str.sub!(/\b0:0:0:0\b/, IN6_DELIMITER)
+      break if str.sub!(/\b0:0:0\b/, IN6_DELIMITER)
+      break if str.sub!(/\b0:0\b/, IN6_DELIMITER)
       break
     end
     str.sub!(/:{3,}/, '::')
@@ -250,6 +250,9 @@ class IPAddr
       str
     end
   end
+  
+  def to_6s
+  end
 
   # Returns a string containing the IP address representation in
   # canonical form.
@@ -263,7 +266,7 @@ class IPAddr
     when Socket::AF_INET
       [@addr].pack('N')
     when Socket::AF_INET6
-      (0..7).map { |i|
+      (0..7).map {|i|
         (@addr >> (112 - 16 * i)) & 0xffff
       }.pack('n8')
     else
@@ -324,7 +327,7 @@ class IPAddr
   def reverse
     case @family
     when Socket::AF_INET
-      _reverse + ".in-addr.arpa"
+      _reverse + '.in-addr.arpa'
     when Socket::AF_INET6
       ip6_arpa
     else
@@ -336,14 +339,14 @@ class IPAddr
   def ip6_arpa
     raise ArgumentError, 'not an IPv6 address' unless ipv6?
     
-    _reverse + ".ip6.arpa"
+    _reverse + '.ip6.arpa'
   end
 
   # Returns a string for DNS reverse lookup compatible with RFC1886.
   def ip6_int
     raise ArgumentError, 'not an IPv6 address' unless ipv6?
     
-    _reverse + ".ip6.int"
+    _reverse + '.ip6.int'
   end
 
   # Returns the successor to the ipaddr.
@@ -360,11 +363,9 @@ class IPAddr
     @addr <=> other.addr
   end
 
-  include Comparable
-
   # Checks equality used by Hash.
   def eql?(other)
-    self.class == other.class && hash == other.hash && self == other
+    (self.class == other.class) && (hash == other.hash) && (self == other)
   end
 
   # Returns a hash value used by Hash, Set, and Array classes
@@ -396,9 +397,9 @@ class IPAddr
     af = (
       case @family
       when Socket::AF_INET
-        "IPv4"
+        'IPv4'
       when Socket::AF_INET6
-        "IPv6"
+        'IPv6'
       else
         raise 'unsupported address family'
       end
@@ -416,11 +417,11 @@ class IPAddr
   def set(addr, *family)
     case family[0] ? family[0] : @family
     when Socket::AF_INET
-      if addr < 0 || addr > IN4MASK
+      if (addr < 0) || (addr > IN4MASK)
         raise ArgumentError, 'invalid address'
       end
     when Socket::AF_INET6
-      if addr < 0 || addr > IN6MASK
+      if (addr < 0) || (addr > IN6MASK)
         raise ArgumentError, 'invalid address'
       end
     else
@@ -441,14 +442,13 @@ class IPAddr
     prefixlen = nil
 
     if mask.kind_of?(String)
-      if mask =~ /\A\d+\z/
+      if /\A\d+\z/ =~ mask
         prefixlen = mask.to_i
       else
         m = IPAddr.new(mask)
-        if m.family != @family
-          raise ArgumentError, 'address family is not same'
-        end
-        @mask_addr = m.to_i
+        raise ArgumentError, 'address family is not same' if m.family != @family
+        
+        @mask_addr = m.addr
         @addr &= @mask_addr
         return self
       end
@@ -473,7 +473,7 @@ class IPAddr
       end
     )
 
-    @addr = ((@addr >> masklen) << masklen)
+    @addr = (@addr >> masklen) << masklen
   
     self
   end
@@ -513,7 +513,7 @@ class IPAddr
     end
 
     prefix, prefixlen = addr.split('/')
-    if prefix =~ /\A\[(.*)\]\z/i
+    if /\A\[(.*)\]\z/i =~ prefix
       prefix = $1
       family = Socket::AF_INET6
     end
@@ -528,7 +528,7 @@ class IPAddr
     end
 
     @addr = @family = nil
-    if family == Socket::AF_UNSPEC || family == Socket::AF_INET
+    if (family == Socket::AF_UNSPEC) || (family == Socket::AF_INET)
       if @addr = in4_addr(prefix)
         @family = Socket::AF_INET
       end
@@ -539,7 +539,7 @@ class IPAddr
       @family = Socket::AF_INET6
     end
 
-    if family != Socket::AF_UNSPEC && @family != family
+    if (family != Socket::AF_UNSPEC) && (@family != family)
       raise ArgumentError, 'address family mismatch'
     end
 
@@ -565,7 +565,7 @@ class IPAddr
   def in4_addr(str)
     return nil unless /\A(?:(?:0|[1-9]\d{0,2})\.){3}(?:0|[1-9]\d{0,2})\z/ =~ str
 
-    str.split(V4_DELIMITER).inject(0){|ret, octet_str|
+    str.split(IN4_DELIMITER).inject(0){|ret, octet_str|
       octet = octet_str.to_i
       return nil unless octet <= 255
 
@@ -591,8 +591,8 @@ class IPAddr
       right = ''
     end
 
-    l = left.split(V6_DELIMITER)
-    r = right.split(V6_DELIMITER)
+    l = left.split(IN6_DELIMITER)
+    r = right.split(IN6_DELIMITER)
     rest = 8 - l.size - r.size
     
     return nil if rest < 0
@@ -618,7 +618,7 @@ class IPAddr
     when Socket::AF_INET
       (0..3).map { |i|
         (@addr >> (8 * i)) & 0xff
-      }.join(V4_DELIMITER)
+      }.join(IN4_DELIMITER)
     when Socket::AF_INET6
       ("%.32x" % @addr).reverse!.gsub!(/.(?!$)/, '\&.')
     else
@@ -631,7 +631,7 @@ class IPAddr
     when Socket::AF_INET
       (0..3).map {|i|
         (addr >> (24 - 8 * i)) & 0xff
-      }.join(V4_DELIMITER)
+      }.join(IN4_DELIMITER)
     when Socket::AF_INET6
       ("%.32x" % addr).gsub!(/.{4}(?!$)/, '\&:')
     else
