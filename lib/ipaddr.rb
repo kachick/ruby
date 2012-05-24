@@ -96,12 +96,17 @@ end
 
 class IPAddr
 
+  V4_DELIMITER = '.'.freeze
+  V6_DELIMITER = ':'.freeze
+
   # 32 bit mask for IPv4
   IN4MASK = 0xffffffff
   # 128 bit mask for IPv4
   IN6MASK = 0xffffffffffffffffffffffffffffffff
   # Formatstring for IPv6
-  IN6FORMAT = (["%.4x"] * 8).join(':')
+  IN6FORMAT = (["%.4x"] * 8).join(V6_DELIMITER)
+
+
 
   # Returns the address family of this IP address.
   attr_reader :family
@@ -119,7 +124,7 @@ class IPAddr
     def ntop(addr)
       case addr.size
       when 4
-        addr.unpack('C4').join('.')
+        addr.unpack('C4').join(V4_DELIMITER)
       when 16
         IN6FORMAT % addr.unpack('n8')
       else
@@ -221,13 +226,13 @@ class IPAddr
 
     str.gsub!(/\b0{1,3}([\da-f]+)\b/i, '\1')
     loop do
-      break if str.sub!(/\A0:0:0:0:0:0:0:0\z/, '::')
-      break if str.sub!(/\b0:0:0:0:0:0:0\b/, ':')
-      break if str.sub!(/\b0:0:0:0:0:0\b/, ':')
-      break if str.sub!(/\b0:0:0:0:0\b/, ':')
-      break if str.sub!(/\b0:0:0:0\b/, ':')
-      break if str.sub!(/\b0:0:0\b/, ':')
-      break if str.sub!(/\b0:0\b/, ':')
+      break if str.sub!(/\A0:0:0:0:0:0:0:0\z/, V6_DELIMITER * 2)
+      break if str.sub!(/\b0:0:0:0:0:0:0\b/, V6_DELIMITER)
+      break if str.sub!(/\b0:0:0:0:0:0\b/, V6_DELIMITER)
+      break if str.sub!(/\b0:0:0:0:0\b/, V6_DELIMITER)
+      break if str.sub!(/\b0:0:0:0\b/, V6_DELIMITER)
+      break if str.sub!(/\b0:0:0\b/, V6_DELIMITER)
+      break if str.sub!(/\b0:0\b/, V6_DELIMITER)
       break
     end
     str.sub!(/:{3,}/, '::')
@@ -524,7 +529,7 @@ class IPAddr
 
     @addr = @family = nil
     if family == Socket::AF_UNSPEC || family == Socket::AF_INET
-      if @addr = in_addr(prefix)
+      if @addr = in4_addr(prefix)
         @family = Socket::AF_INET
       end
     end
@@ -556,24 +561,28 @@ class IPAddr
     end
   end
 
-  def in_addr(addr)
-    (addr =~ /\A(?:(?:0|[1-9]\d{0,2})\.){3}(?:0|[1-9]\d{0,2})\z/) &&
-      addr.split('.').inject(0){|i, s|
-        n = s.to_i
-        raise ArgumentError, 'invalid address' unless n <= 255
+  # return nil if str is invalid format for IPv4
+  def in4_addr(str)
+    return nil unless /\A(?:(?:0|[1-9]\d{0,2})\.){3}(?:0|[1-9]\d{0,2})\z/ =~ str
 
-        i << 8 | n
-      }
+    str.split(V4_DELIMITER).inject(0){|ret, octet_str|
+      octet = octet_str.to_i
+      return nil unless octet <= 255
+
+      (ret << 8) | octet
+    }
   end
+  
+  alias_method :in_addr, :in4_addr
 
   def in6_addr(left)
     left, right = nil, nil
 
     case left
     when /\A::ffff:(\d+\.\d+\.\d+\.\d+)\z/i
-      return in_addr($1) + 0xffff00000000
+      return in4_addr($1) + 0xffff00000000
     when /\A::(\d+\.\d+\.\d+\.\d+)\z/i
-      return in_addr($1)
+      return in4_addr($1)
     when /[^0-9a-f:]/i
       raise ArgumentError, 'invalid address'
     when /\A(.*)::(.*)\z/
@@ -582,14 +591,14 @@ class IPAddr
       right = ''
     end
 
-    l = left.split(':')
-    r = right.split(':')
+    l = left.split(V6_DELIMITER)
+    r = right.split(V6_DELIMITER)
     rest = 8 - l.size - r.size
     
     return nil if rest < 0
 
-    (l + Array.new(rest, '0') + r).inject(0) {|i, s|
-      i << 16 | s.hex
+    (l + Array.new(rest, '0') + r).inject(0) {|ret, s|
+      (ret << 16) | s.hex
     }
   end
 
@@ -609,7 +618,7 @@ class IPAddr
     when Socket::AF_INET
       (0..3).map { |i|
         (@addr >> (8 * i)) & 0xff
-      }.join('.')
+      }.join(V4_DELIMITER)
     when Socket::AF_INET6
       ("%.32x" % @addr).reverse!.gsub!(/.(?!$)/, '\&.')
     else
@@ -622,7 +631,7 @@ class IPAddr
     when Socket::AF_INET
       (0..3).map {|i|
         (addr >> (24 - 8 * i)) & 0xff
-      }.join('.')
+      }.join(V4_DELIMITER)
     when Socket::AF_INET6
       ("%.32x" % addr).gsub!(/.{4}(?!$)/, '\&:')
     else
