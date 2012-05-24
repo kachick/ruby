@@ -221,37 +221,14 @@ class IPAddr
 
   # Returns a string containing the IP address representation.
   def to_s
-    str = to_string
-    return str if ipv4?
-
-    str.gsub!(/\b0{1,3}([\da-f]+)\b/i, '\1')
-    loop do
-      break if str.sub!(/\A0:0:0:0:0:0:0:0\z/, IN6_DELIMITER * 2)
-      break if str.sub!(/\b0:0:0:0:0:0:0\b/, IN6_DELIMITER)
-      break if str.sub!(/\b0:0:0:0:0:0\b/, IN6_DELIMITER)
-      break if str.sub!(/\b0:0:0:0:0\b/, IN6_DELIMITER)
-      break if str.sub!(/\b0:0:0:0\b/, IN6_DELIMITER)
-      break if str.sub!(/\b0:0:0\b/, IN6_DELIMITER)
-      break if str.sub!(/\b0:0\b/, IN6_DELIMITER)
-      break
-    end
-    str.sub!(/:{3,}/, '::')
-
-    if /\A::(ffff:)?([\da-f]{1,4}):([\da-f]{1,4})\z/i =~ str
-      sprintf(
-        '::%s%d.%d.%d.%d',
-        $1,
-        $2.hex / 256,
-        $2.hex % 256,
-        $3.hex / 256,
-        $3.hex % 256
-      )
+    case
+    when ipv4?
+      to_4s
+    when ipv6?
+      to_6s
     else
-      str
+      raise 'must not happen'
     end
-  end
-  
-  def to_6s
   end
 
   # Returns a string containing the IP address representation in
@@ -629,13 +606,53 @@ class IPAddr
   def _to_string(addr)
     case @family
     when Socket::AF_INET
-      (0..3).map {|i|
-        (addr >> (24 - 8 * i)) & 0xff
-      }.join(IN4_DELIMITER)
+      _to_4string(addr)
     when Socket::AF_INET6
-      ("%.32x" % addr).gsub!(/.{4}(?!$)/, '\&:')
+      _to_6string(addr)
     else
       raise 'unsupported address family'
+    end
+  end
+
+  def _to_4string(addr)
+    (0..3).map {|i|
+      (addr >> (24 - 8 * i)) & 0xff
+    }.join(IN4_DELIMITER)
+  end
+
+  def _to_6string(addr)
+    ("%.32x" % addr).gsub!(/.{4}(?!$)/, '\&:')
+  end
+
+  def to_4s
+    _to_4string(@addr)
+  end
+    
+  def to_6s
+    _to_6string(@addr).gsub!(/\b0{1,3}([\da-f]+)\b/i, '\1')
+    loop do
+      break if str.sub!(/\A0:0:0:0:0:0:0:0\z/, IN6_DELIMITER * 2)
+      break if str.sub!(/\b0:0:0:0:0:0:0\b/, IN6_DELIMITER)
+      break if str.sub!(/\b0:0:0:0:0:0\b/, IN6_DELIMITER)
+      break if str.sub!(/\b0:0:0:0:0\b/, IN6_DELIMITER)
+      break if str.sub!(/\b0:0:0:0\b/, IN6_DELIMITER)
+      break if str.sub!(/\b0:0:0\b/, IN6_DELIMITER)
+      break if str.sub!(/\b0:0\b/, IN6_DELIMITER)
+      break
+    end
+    str.sub!(/:{3,}/, IN6_DELIMITER * 2)
+
+    if /\A::(ffff:)?([\da-f]{1,4}):([\da-f]{1,4})\z/i =~ str
+      sprintf(
+        '::%s%d.%d.%d.%d',
+        $1,
+        $2.hex / 256,
+        $2.hex % 256,
+        $3.hex / 256,
+        $3.hex % 256
+      )
+    else
+      str
     end
   end
 
