@@ -223,7 +223,7 @@ module TSort
   end
 
   #
-  # Should be implemented by a extended class.
+  # Should be implemented by included classes.
   #
   # #tsort_each_node is used to iterate for all nodes over a graph.
   #
@@ -232,7 +232,7 @@ module TSort
   end
 
   #
-  # Should be implemented by a extended class.
+  # Should be implemented by included classes.
   #
   # #tsort_each_child is used to iterate for child nodes of _node_.
   #
