@@ -533,7 +533,7 @@ class TestRegexp < Test::Unit::TestCase
   end
 
   def test_match
-    assert_nil(//.match(nil))
+    assert_raise(TypeError) { //.match(nil) }
     assert_equal("abc", /.../.match(:abc)[0])
     assert_raise(TypeError) { /.../.match(Object.new)[0] }
     assert_equal("bc", /../.match('abc', 1)[0])
@@ -559,6 +559,7 @@ class TestRegexp < Test::Unit::TestCase
     assert_equal(true, //.match?(""))
     assert_equal(true, /.../.match?(:abc))
     assert_raise(TypeError) { /.../.match?(Object.new) }
+    assert_raise(TypeError) { //.match?(nil) }
     assert_equal(true, /b/.match?('abc'))
     assert_equal(true, /b/.match?('abc', 1))
     assert_equal(true, /../.match?('abc', 1))
